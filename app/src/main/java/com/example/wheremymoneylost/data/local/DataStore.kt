@@ -2,8 +2,7 @@ package com.example.wheremymoneylost.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.example.wheremymoneylost.data.model.Category
-import com.example.wheremymoneylost.data.model.Expense
+import com.example.wheremymoneylost.data.model.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
@@ -20,6 +19,39 @@ class DataStore(context: Context) {
     fun loadExpenses(): MutableList<Expense> {
         val json = prefs.getString("expenses", null) ?: return mutableListOf()
         val type = object : TypeToken<MutableList<Expense>>() {}.type
+        return gson.fromJson(json, type)
+    }
+
+    // --- Recurring Expenses ---
+    fun saveRecurringExpenses(recurring: List<RecurringExpense>) {
+        prefs.edit().putString("recurring_expenses", gson.toJson(recurring)).apply()
+    }
+
+    fun loadRecurringExpenses(): MutableList<RecurringExpense> {
+        val json = prefs.getString("recurring_expenses", null) ?: return mutableListOf()
+        val type = object : TypeToken<MutableList<RecurringExpense>>() {}.type
+        return gson.fromJson(json, type)
+    }
+
+    // --- Bills ---
+    fun saveBills(bills: List<Bill>) {
+        prefs.edit().putString("bills", gson.toJson(bills)).apply()
+    }
+
+    fun loadBills(): MutableList<Bill> {
+        val json = prefs.getString("bills", null) ?: return mutableListOf()
+        val type = object : TypeToken<MutableList<Bill>>() {}.type
+        return gson.fromJson(json, type)
+    }
+
+    // --- Saving Goals ---
+    fun saveSavingGoals(goals: List<SavingGoal>) {
+        prefs.edit().putString("saving_goals", gson.toJson(goals)).apply()
+    }
+
+    fun loadSavingGoals(): MutableList<SavingGoal> {
+        val json = prefs.getString("saving_goals", null) ?: return mutableListOf()
+        val type = object : TypeToken<MutableList<SavingGoal>>() {}.type
         return gson.fromJson(json, type)
     }
 
@@ -43,7 +75,24 @@ class DataStore(context: Context) {
         return prefs.getLong("budget", 10000L).toDouble()
     }
 
-    // --- Dark Mode ---
+    // --- Streak & Last Visit ---
+    fun saveStreak(streak: Int) {
+        prefs.edit().putInt("streak", streak).apply()
+    }
+
+    fun loadStreak(): Int {
+        return prefs.getInt("streak", 0)
+    }
+
+    fun saveLastVisitDate(dateStr: String) { // YYYY-MM-DD
+        prefs.edit().putString("last_visit_date", dateStr).apply()
+    }
+
+    fun loadLastVisitDate(): String {
+        return prefs.getString("last_visit_date", "") ?: ""
+    }
+
+    // --- Settings ---
     fun saveDarkMode(enabled: Boolean) {
         prefs.edit().putBoolean("dark_mode", enabled).apply()
     }
@@ -52,7 +101,6 @@ class DataStore(context: Context) {
         return prefs.getBoolean("dark_mode", false)
     }
 
-    // --- Next ID ---
     fun saveNextId(id: Int) {
         prefs.edit().putInt("next_id", id).apply()
     }
@@ -61,7 +109,6 @@ class DataStore(context: Context) {
         return prefs.getInt("next_id", 1)
     }
 
-    // --- Alert Percent ---
     fun saveAlertPercent(percent: Int) {
         prefs.edit().putInt("alert_percent", percent).apply()
     }
@@ -70,7 +117,6 @@ class DataStore(context: Context) {
         return prefs.getInt("alert_percent", 80)
     }
 
-    // --- Ongoing Notification ---
     fun saveOngoingNotification(enabled: Boolean) {
         prefs.edit().putBoolean("ongoing_notification", enabled).apply()
     }

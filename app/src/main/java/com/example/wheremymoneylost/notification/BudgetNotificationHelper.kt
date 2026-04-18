@@ -116,6 +116,36 @@ class BudgetNotificationHelper(private val context: Context) {
         }
     }
 
+    // --- Alert เตือนจ่ายบิลล่วงหน้า 1 วัน ---
+    fun notifyBillReminder(billName: String, amount: Int) {
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle("📅 พรุ่งนี้มีบิลต้องจ่าย!")
+            .setContentText("อย่าลืมจ่าย: $billName จำนวน ฿$amount")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+
+        if (hasPermission()) {
+            NotificationManagerCompat.from(context).notify(4000 + billName.hashCode(), notification)
+        }
+    }
+
+    // --- Alert เมื่อทำเป้าหมายสำเร็จ ---
+    fun notifyGoalSuccess(goalName: String) {
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.btn_star_big_on)
+            .setContentTitle("🎉 ยินดีด้วย! ออมครบแล้ว")
+            .setContentText("คุณทำเป้าหมาย '$goalName' สำเร็จแล้ว!")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+
+        if (hasPermission()) {
+            NotificationManagerCompat.from(context).notify(5000 + goalName.hashCode(), notification)
+        }
+    }
+
     private fun hasPermission(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             return ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==

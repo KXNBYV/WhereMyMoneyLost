@@ -1,9 +1,9 @@
 package com.example.wheremymoneylost.data.model
 
-data class Expense(
+data class RecurringExpense(
     val id: Int,
     val amount: Double,
     val categoryId: Int,
-    val timestamp: Long = System.currentTimeMillis(),
-    val memo: String = ""
+    val name: String,
+    val dayOfMonth: Int // 1-31
 )

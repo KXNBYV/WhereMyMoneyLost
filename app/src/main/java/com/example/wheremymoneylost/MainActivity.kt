@@ -10,20 +10,15 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.wheremymoneylost.ui.screen.HistoryScreen
-import com.example.wheremymoneylost.ui.screen.MainScreen
-import com.example.wheremymoneylost.ui.screen.SettingsScreen
+import com.example.wheremymoneylost.ui.screen.*
 import com.example.wheremymoneylost.ui.theme.WhereMyMoneyLostTheme
 import com.example.wheremymoneylost.ui.viewmodel.MainViewModel
 
@@ -36,7 +31,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ขอ Permission Notification สำหรับ Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -66,6 +60,8 @@ fun AppNavigation(viewModel: MainViewModel) {
 
     val navItems = listOf(
         NavItem("หน้าหลัก", Icons.Filled.Home, Icons.Outlined.Home),
+        NavItem("ปฏิทิน", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
+        NavItem("เป้าหมาย", Icons.Filled.Flag, Icons.Outlined.Flag),
         NavItem("ประวัติ", Icons.Filled.History, Icons.Outlined.History),
         NavItem("ตั้งค่า", Icons.Filled.Settings, Icons.Outlined.Settings)
     )
@@ -73,7 +69,10 @@ fun AppNavigation(viewModel: MainViewModel) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 2.dp
+            ) {
                 navItems.forEachIndexed { index, item ->
                     NavigationBarItem(
                         selected = selectedTab == index,
@@ -81,10 +80,21 @@ fun AppNavigation(viewModel: MainViewModel) {
                         icon = {
                             Icon(
                                 if (selectedTab == index) item.selectedIcon else item.unselectedIcon,
-                                contentDescription = item.label
+                                contentDescription = item.label,
+                                tint = if (selectedTab == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
-                        label = { Text(item.label) }
+                        label = { 
+                            Text(
+                                item.label, 
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                color = if (selectedTab == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                        )
                     )
                 }
             }
@@ -93,8 +103,10 @@ fun AppNavigation(viewModel: MainViewModel) {
         Box(modifier = Modifier.padding(innerPadding)) {
             when (selectedTab) {
                 0 -> MainScreen(viewModel)
-                1 -> HistoryScreen(viewModel)
-                2 -> SettingsScreen(viewModel)
+                1 -> CalendarScreen(viewModel)
+                2 -> GoalsScreen(viewModel)
+                3 -> HistoryScreen(viewModel)
+                4 -> SettingsScreen(viewModel)
             }
         }
     }

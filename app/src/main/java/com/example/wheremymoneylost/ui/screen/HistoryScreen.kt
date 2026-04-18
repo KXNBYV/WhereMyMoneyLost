@@ -32,51 +32,68 @@ fun HistoryScreen(viewModel: MainViewModel) {
     val expenses = viewModel.expenses.sortedByDescending { it.timestamp }
     val categories = viewModel.categories
 
+    // Grouping by date
+    val groupedExpenses = expenses.groupBy { 
+        SimpleDateFormat("dd MMMM yyyy", Locale("th", "TH")).format(Date(it.timestamp))
+    }
+
     var editingExpense by remember { mutableStateOf<Expense?>(null) }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("📋 ประวัติรายจ่าย", style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text("ทั้งหมด ${expenses.size} รายการ • รวม ฿${expenses.sumOf { it.amount }.toInt()}",
-            fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(modifier = Modifier.height(16.dp))
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(20.dp)
+    ) {
+        Text(
+            "ประวัติรายจ่าย", 
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(24.dp))
 
         if (expenses.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("📭", fontSize = 48.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("ยังไม่มีรายการ", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)
-                }
+                Text("ยังไม่มีรายการ", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(expenses, key = { it.id }) { expense ->
-                    val catName = categories.find { it.id == expense.categoryId }?.name ?: "อื่นๆ"
-                    val catColor = categories.find { it.id == expense.categoryId }?.colorHex ?: "#999999"
-
-                    ExpenseItem(
-                        expense = expense,
-                        categoryName = catName,
-                        categoryColor = catColor,
-                        onEdit = { editingExpense = expense },
-                        onDelete = { viewModel.deleteExpense(expense.id) }
-                    )
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                groupedExpenses.forEach { (date, items) ->
+                    item {
+                        Text(
+                            date, 
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                    items(items, key = { it.id }) { expense ->
+                        val cat = categories.find { it.id == expense.categoryId }
+                        val catColor = try { Color(android.graphics.Color.parseColor(cat?.colorHex ?: "#999999")) } catch (e: Exception) { Color.Gray }
+                        
+                        MinimalExpenseItem(
+                            expense = expense,
+                            categoryName = cat?.name ?: "อื่นๆ",
+                            categoryColor = catColor,
+                            onEdit = { editingExpense = expense },
+                            onDelete = { viewModel.deleteExpense(expense.id) }
+                        )
+                    }
                 }
+                item { Spacer(modifier = Modifier.height(40.dp)) }
             }
         }
     }
 
-    // --- Edit Dialog ---
     editingExpense?.let { expense ->
         EditExpenseDialog(
             expense = expense,
             categories = categories.map { it.id to it.name },
             currentCategoryId = expense.categoryId,
             onDismiss = { editingExpense = null },
-            onSave = { newAmount, newCatId ->
-                viewModel.editExpense(expense.id, newAmount, newCatId)
+            onSave = { newAmount, newCatId, newMemo ->
+                viewModel.editExpense(expense.id, newAmount, newCatId, newMemo)
                 editingExpense = null
             }
         )
@@ -84,39 +101,49 @@ fun HistoryScreen(viewModel: MainViewModel) {
 }
 
 @Composable
-fun ExpenseItem(
+fun MinimalExpenseItem(
     expense: Expense,
     categoryName: String,
-    categoryColor: String,
+    categoryColor: Color,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    val color = try { Color(android.graphics.Color.parseColor(categoryColor)) } catch (e: Exception) { Color.Gray }
-    val dateFormat = SimpleDateFormat("dd MMM yyyy  HH:mm", Locale("th"))
-    val dateStr = dateFormat.format(Date(expense.timestamp))
+    val timeStr = SimpleDateFormat("HH:mm", Locale("th")).format(Date(expense.timestamp))
 
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
-        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(color.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center) {
-                Box(modifier = Modifier.size(18.dp).clip(CircleShape).background(color))
-            }
-            Spacer(modifier = Modifier.width(12.dp))
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(categoryColor)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(categoryName, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                Text(dateStr, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(categoryName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                if (expense.memo.isNotEmpty()) {
+                    Text(expense.memo, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text(timeStr, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text("฿${expense.amount.toInt()}", fontWeight = FontWeight.Bold, fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.error)
-            IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.Edit, "แก้ไข", modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+            Text("฿${expense.amount.toInt()}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            IconButton(onClick = { showDeleteConfirm = true }, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.Delete, "ลบ", modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            IconButton(onClick = { showDeleteConfirm = true }, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Default.Delete, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
             }
         }
     }
@@ -124,8 +151,7 @@ fun ExpenseItem(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("ลบรายการนี้?") },
-            text = { Text("ลบรายจ่าย ฿${expense.amount.toInt()} หมวด $categoryName") },
+            title = { Text("ลบรายการ?") },
             confirmButton = {
                 TextButton(onClick = { onDelete(); showDeleteConfirm = false }) {
                     Text("ลบ", color = MaterialTheme.colorScheme.error)
@@ -142,45 +168,44 @@ fun EditExpenseDialog(
     categories: List<Pair<Int, String>>,
     currentCategoryId: Int,
     onDismiss: () -> Unit,
-    onSave: (Double, Int) -> Unit
+    onSave: (Double, Int, String) -> Unit
 ) {
     var amountInput by remember { mutableStateOf(expense.amount.toInt().toString()) }
+    var memoInput by remember { mutableStateOf(expense.memo) }
     var selectedCatId by remember { mutableIntStateOf(currentCategoryId) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("✏️ แก้ไขรายจ่าย") },
+        title = { Text("แก้ไขรายจ่าย") },
         text = {
             Column {
                 OutlinedTextField(
                     value = amountInput,
                     onValueChange = { amountInput = it.filter { c -> c.isDigit() || c == '.' } },
                     label = { Text("จำนวนเงิน") },
-                    leadingIcon = { Text("฿", fontSize = 16.sp, fontWeight = FontWeight.Bold) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = memoInput,
+                    onValueChange = { memoInput = it },
+                    label = { Text("โน้ต") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                Text("เลือกหมวดหมู่:", fontSize = 14.sp)
-                Spacer(modifier = Modifier.height(4.dp))
-
-                categories.forEach { (catId, catName) ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { selectedCatId = catId }
-                            .background(
-                                if (selectedCatId == catId) MaterialTheme.colorScheme.primaryContainer
-                                else Color.Transparent
-                            )
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(selected = selectedCatId == catId, onClick = { selectedCatId = catId })
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(catName)
+                Text("หมวดหมู่:", style = MaterialTheme.typography.labelMedium)
+                LazyColumn(modifier = Modifier.height(150.dp)) {
+                    items(categories) { (id, name) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedCatId = id }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = selectedCatId == id, onClick = { selectedCatId = id })
+                            Text(name, style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
                 }
             }
@@ -188,9 +213,8 @@ fun EditExpenseDialog(
         confirmButton = {
             TextButton(onClick = {
                 val amount = amountInput.toDoubleOrNull()
-                if (amount != null && amount > 0) onSave(amount, selectedCatId)
+                if (amount != null) onSave(amount, selectedCatId, memoInput)
             }) { Text("บันทึก") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("ยกเลิก") } }
+        }
     )
 }

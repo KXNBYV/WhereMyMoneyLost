@@ -1,36 +1,32 @@
 package com.example.wheremymoneylost.ui.theme
 
-import android.os.Build
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
     primary = DarkPrimary,
     onPrimary = DarkOnPrimary,
     primaryContainer = DarkPrimaryContainer,
-    secondary = DarkSecondary,
-    tertiary = DarkTertiary,
     background = DarkBackground,
     surface = DarkSurface,
     surfaceVariant = DarkSurfaceVariant,
     onSurface = DarkOnSurface,
     onSurfaceVariant = DarkOnSurfaceVariant,
-    error = DarkError
+    error = Error
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Primary,
-    onPrimary = OnPrimary,
-    primaryContainer = PrimaryContainer,
-    secondary = Secondary,
-    tertiary = Tertiary,
-    background = Background,
-    surface = Surface,
-    surfaceVariant = SurfaceVariant,
-    onSurface = OnSurface,
-    onSurfaceVariant = OnSurfaceVariant,
+    primary = LightPrimary,
+    onPrimary = LightOnPrimary,
+    primaryContainer = LightPrimaryContainer,
+    background = LightBackground,
+    surface = LightSurface,
+    surfaceVariant = LightPrimaryContainer.copy(alpha = 0.3f), // Approximate variant
+    onSurface = LightOnSurface,
+    onSurfaceVariant = LightOnSurfaceVariant,
     error = Error
 )
 
