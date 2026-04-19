@@ -48,18 +48,14 @@ fun MainScreen(viewModel: MainViewModel) {
     val categories = viewModel.categories
     val budget = viewModel.monthlyBudget.doubleValue
     val totalSpent = selectedExpenses.sumOf { it.amount }
-    val velocity = viewModel.getSpendingVelocity()
     val upcomingBills = viewModel.getUpcomingBills().take(3)
     
     var currentInput by remember { mutableStateOf("") }
     var memoInput by remember { mutableStateOf("") }
     var showAddCategory by remember { mutableStateOf(false) }
-    var showDeleteCategory by remember { mutableStateOf<Int?>(null) }
-
-    val animatedVelocity by animateFloatAsState(
-        targetValue = velocity.coerceIn(0f, 1f),
-        animationSpec = tween(durationMillis = 1000), label = "velocity"
-    )
+    var categoryToManage by remember { mutableStateOf<com.example.wheremymoneylost.data.model.Category?>(null) }
+    var categoryToEdit by remember { mutableStateOf<com.example.wheremymoneylost.data.model.Category?>(null) }
+    var showDeleteConfirm by remember { mutableStateOf<com.example.wheremymoneylost.data.model.Category?>(null) }
 
     Column(
         modifier = Modifier
@@ -75,19 +71,12 @@ fun MainScreen(viewModel: MainViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    "เงินหายไปไหน", 
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    "${viewModel.getMonthName(viewModel.selectedMonth.intValue)} ${viewModel.selectedYear.intValue + 543}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                "WHEREMYMONEYLOST",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.primary
+            )
             if (viewModel.streak.intValue > 0) {
                 Surface(
                     color = MaterialTheme.colorScheme.primaryContainer,
@@ -104,7 +93,34 @@ fun MainScreen(viewModel: MainViewModel) {
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // --- Month Navigation ---
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { viewModel.navigateMonth(-1) }) {
+                Icon(Icons.Default.ChevronLeft, contentDescription = "เดือนก่อน")
+            }
+            Text(
+                "${viewModel.getMonthName(viewModel.selectedMonth.intValue)} ${viewModel.selectedYear.intValue + 543}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+            IconButton(onClick = { viewModel.navigateMonth(1) }) {
+                Icon(Icons.Default.ChevronRight, contentDescription = "เดือนถัดไป")
+            }
+            if (!viewModel.isCurrentMonth()) {
+                TextButton(onClick = { viewModel.goToCurrentMonth() }) {
+                    Text("วันนี้", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         // --- Spending Analysis Card ---
         Card(
@@ -119,7 +135,12 @@ fun MainScreen(viewModel: MainViewModel) {
             ) {
                 Text("สถานะการเงินเดือนนี้", style = MaterialTheme.typography.labelLarge, color = Color.Gray)
                 Spacer(modifier = Modifier.height(16.dp))
-                SpendingVelocityMeter(animatedVelocity, totalSpent, budget)
+                SpendingDonutChart(
+                    categories = categories.toList(),
+                    expenses = selectedExpenses,
+                    totalSpent = totalSpent,
+                    budget = budget
+                )
             }
         }
 
@@ -129,7 +150,7 @@ fun MainScreen(viewModel: MainViewModel) {
         if (upcomingBills.isNotEmpty()) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    "บิลที่ใกล้ถึงกำหนด (To-Do)", 
+                    "บิลที่ใกล้ถึงกำหนด",
                     style = MaterialTheme.typography.titleMedium, 
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
@@ -284,7 +305,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                                     memoInput = ""
                                                 }
                                             },
-                                            onLongClick = { showDeleteCategory = cat.id }
+                                            onLongClick = { categoryToManage = cat }
                                         )
                                         .padding(4.dp)
                                 ) {
@@ -326,58 +347,208 @@ fun MainScreen(viewModel: MainViewModel) {
             showAddCategory = false
         })
     }
+
+    if (categoryToEdit != null) {
+        AddCategoryDialog(
+            categoryToEdit = categoryToEdit,
+            onDismiss = { categoryToEdit = null },
+            onAdd = { n, i, c, l ->
+                viewModel.updateCategory(categoryToEdit!!.id, n, i, c, l)
+                categoryToEdit = null
+            }
+        )
+    }
+
+    if (categoryToManage != null) {
+        AlertDialog(
+            onDismissRequest = { categoryToManage = null },
+            title = { Text("จัดการหมวดหมู่: ${categoryToManage!!.name}") },
+            text = { Text("เลือกสิ่งที่คุณต้องการทำกับหมวดหมู่นี้") },
+            confirmButton = {
+                TextButton(onClick = {
+                    categoryToEdit = categoryToManage
+                    categoryToManage = null
+                }) {
+                    Text("แก้ไข")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirm = categoryToManage
+                        categoryToManage = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("ลบ")
+                }
+            }
+        )
+    }
+
+    if (showDeleteConfirm != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = null },
+            title = { Text("ยืนยันการลบ") },
+            text = { Text("คุณต้องการลบหมวดหมู่ \"${showDeleteConfirm!!.name}\" ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteCategory(showDeleteConfirm!!.id)
+                        showDeleteConfirm = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("ยืนยันการลบ")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = null }) {
+                    Text("ยกเลิก")
+                }
+            }
+        )
+    }
 }
 
 @Composable
-fun SpendingVelocityMeter(velocity: Float, totalSpent: Double, budget: Double) {
-    val gaugeColor by animateColorAsState(
+fun SpendingDonutChart(
+    categories: List<com.example.wheremymoneylost.data.model.Category>,
+    expenses: List<com.example.wheremymoneylost.data.model.Expense>,
+    totalSpent: Double,
+    budget: Double
+) {
+    // Build slices: category name, amount, color
+    data class Slice(val name: String, val amount: Double, val color: Color)
+
+    val slices = remember(categories, expenses) {
+        categories.mapNotNull { cat ->
+            val spent = expenses.filter { it.categoryId == cat.id }.sumOf { it.amount }
+            if (spent > 0) {
+                val color = try { Color(android.graphics.Color.parseColor(cat.colorHex)) } catch (_: Exception) { Color.Gray }
+                Slice(cat.name, spent, color)
+            } else null
+        }
+    }
+
+    val animationProgress by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = tween(durationMillis = 1000), label = "donut"
+    )
+
+    val spentPercent = if (budget > 0) (totalSpent / budget * 100).toInt() else 0
+    val statusColor by animateColorAsState(
         targetValue = when {
-            velocity > 0.7f -> Error
-            velocity > 0.5f -> Warning
+            spentPercent >= 100 -> Error
+            spentPercent >= 80 -> Warning
             else -> Success
-        }, label = "gaugeColor"
+        }, label = "statusColor"
     )
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(280.dp, 160.dp)) {
-            Canvas(modifier = Modifier.size(280.dp, 280.dp).offset(y = 60.dp)) {
-                val strokeWidth = 18.dp.toPx()
-                val radius = (size.width - strokeWidth) / 2f
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(220.dp)) {
+            Canvas(modifier = Modifier.size(220.dp)) {
+                val strokeWidth = 28.dp.toPx()
+                val diameter = size.width - strokeWidth
                 val topLeft = Offset(strokeWidth / 2f, strokeWidth / 2f)
-                
-                drawArc(
-                    color = Color.LightGray.copy(alpha = 0.2f),
-                    startAngle = 180f, sweepAngle = 180f, useCenter = false,
-                    topLeft = topLeft, size = Size(radius * 2, radius * 2),
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                )
-                drawArc(
-                    brush = Brush.horizontalGradient(listOf(Success, gaugeColor)),
-                    startAngle = 180f, sweepAngle = velocity * 180f, useCenter = false,
-                    topLeft = topLeft, size = Size(radius * 2, radius * 2),
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                )
+                val arcSize = Size(diameter, diameter)
+
+                if (slices.isEmpty()) {
+                    // Empty state ring
+                    drawArc(
+                        color = Color.LightGray.copy(alpha = 0.25f),
+                        startAngle = -90f, sweepAngle = 360f, useCenter = false,
+                        topLeft = topLeft, size = arcSize,
+                        style = Stroke(width = strokeWidth, cap = StrokeCap.Butt)
+                    )
+                } else {
+                    // Background track
+                    drawArc(
+                        color = Color.LightGray.copy(alpha = 0.1f),
+                        startAngle = -90f, sweepAngle = 360f, useCenter = false,
+                        topLeft = topLeft, size = arcSize,
+                        style = Stroke(width = strokeWidth, cap = StrokeCap.Butt)
+                    )
+                    // Category slices
+                    var startAngle = -90f
+                    val gapAngle = if (slices.size > 1) 3f else 0f
+                    val totalGap = gapAngle * slices.size
+                    val availableSweep = (360f - totalGap) * animationProgress
+
+                    slices.forEach { slice ->
+                        val sweep = (slice.amount / totalSpent).toFloat() * availableSweep
+                        drawArc(
+                            color = slice.color,
+                            startAngle = startAngle,
+                            sweepAngle = sweep,
+                            useCenter = false,
+                            topLeft = topLeft, size = arcSize,
+                            style = Stroke(width = strokeWidth, cap = StrokeCap.Butt)
+                        )
+                        startAngle += sweep + gapAngle
+                    }
+                }
             }
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.offset(y = 30.dp)) {
-                Text(
-                    text = when {
-                        velocity > 0.7f -> "ใช้เงินเร็วมาก"
-                        velocity > 0.5f -> "ใช้เงินเริ่มเร็ว"
-                        else -> "ความเร็วปกติ"
-                    },
-                    style = MaterialTheme.typography.titleMedium,
-                    color = gaugeColor,
-                    fontWeight = FontWeight.Bold
-                )
+
+            // Center info
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     "฿${totalSpent.toInt()}",
-                    style = MaterialTheme.typography.displaySmall,
+                    style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.ExtraBold
                 )
-                Text("งบ ฿${budget.toInt()}", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                if (budget > 0) {
+                    Text(
+                        "${spentPercent}%",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = statusColor
+                    )
+                    Text(
+                        "งบ ฿${budget.toInt()}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                } else {
+                    Text(
+                        if (slices.isEmpty()) "ยังไม่มีรายจ่าย" else "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
+            }
+        }
+
+        // Legend
+        if (slices.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            val rows = slices.chunked(2)
+            rows.forEach { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    row.forEach { slice ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .background(slice.color, CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "${slice.name} ฿${slice.amount.toInt()}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
             }
         }
     }

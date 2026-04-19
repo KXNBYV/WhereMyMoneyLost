@@ -153,6 +153,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun editSavingGoal(id: Int, newName: String, newTarget: Double) {
+        val index = savingGoals.indexOfFirst { it.id == id }
+        if (index >= 0) {
+            val goal = savingGoals[index]
+            savingGoals[index] = goal.copy(name = newName, targetAmount = newTarget)
+            dataStore.saveSavingGoals(savingGoals.toList())
+        }
+    }
+
     fun deleteSavingGoal(id: Int) {
         savingGoals.removeAll { it.id == id }
         dataStore.saveSavingGoals(savingGoals.toList())
@@ -321,11 +330,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         dataStore.saveBudget(amount)
         notifiedAlerts.clear()
         updateOngoingNotification()
+        SimpleExpenseWidget.updateAllWidgets(getApplication())
     }
 
     fun setDarkMode(enabled: Boolean) {
         isDarkMode.value = enabled
         dataStore.saveDarkMode(enabled)
+        SimpleExpenseWidget.updateAllWidgets(getApplication())
     }
 
     fun setAlertPercent(percent: Int) {
@@ -350,6 +361,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteCategory(id: Int) {
         categories.removeAll { it.id == id }
         dataStore.saveCategories(categories.toList())
+    }
+
+    fun updateCategory(id: Int, name: String, iconName: String, colorHex: String, budgetLimit: Double) {
+        val index = categories.indexOfFirst { it.id == id }
+        if (index >= 0) {
+            categories[index] = Category(id = id, name = name, iconName = iconName, colorHex = colorHex, budgetLimit = budgetLimit)
+            dataStore.saveCategories(categories.toList())
+        }
     }
 
     fun updateCategoryBudget(id: Int, budgetLimit: Double) {

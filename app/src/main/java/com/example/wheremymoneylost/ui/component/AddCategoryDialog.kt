@@ -21,12 +21,13 @@ import com.example.wheremymoneylost.ui.screen.getIconForCategory
 @Composable
 fun AddCategoryDialog(
     onDismiss: () -> Unit,
-    onAdd: (name: String, iconName: String, colorHex: String, budgetLimit: Double) -> Unit
+    onAdd: (name: String, iconName: String, colorHex: String, budgetLimit: Double) -> Unit,
+    categoryToEdit: com.example.wheremymoneylost.data.model.Category? = null
 ) {
-    var newCatName by remember { mutableStateOf("") }
-    var selectedColor by remember { mutableStateOf("#4CAF50") }
-    var selectedIcon by remember { mutableStateOf("star") }
-    var budgetInput by remember { mutableStateOf("") }
+    var newCatName by remember { mutableStateOf(categoryToEdit?.name ?: "") }
+    var selectedColor by remember { mutableStateOf(categoryToEdit?.colorHex ?: "#4CAF50") }
+    var selectedIcon by remember { mutableStateOf(categoryToEdit?.iconName ?: "star") }
+    var budgetInput by remember { mutableStateOf(if (categoryToEdit != null && categoryToEdit.budgetLimit > 0) categoryToEdit.budgetLimit.toInt().toString() else "") }
 
     val availableColors = listOf(
         "#F44336", "#E91E63", "#9C27B0", "#673AB7",
@@ -41,7 +42,7 @@ fun AddCategoryDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("เพิ่มหมวดหมู่ใหม่") },
+        title = { Text(if (categoryToEdit == null) "เพิ่มหมวดหมู่ใหม่" else "แก้ไขหมวดหมู่") },
         text = {
             Column {
                 OutlinedTextField(
@@ -131,7 +132,7 @@ fun AddCategoryDialog(
                     onAdd(newCatName.trim(), selectedIcon, selectedColor, limit)
                 }
             }) {
-                Text("เพิ่ม")
+                Text(if (categoryToEdit == null) "เพิ่ม" else "บันทึก")
             }
         },
         dismissButton = {

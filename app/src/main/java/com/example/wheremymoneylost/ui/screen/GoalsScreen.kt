@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,6 +28,7 @@ fun GoalsScreen(viewModel: MainViewModel) {
     val goals = viewModel.savingGoals
     var showAddGoal by remember { mutableStateOf(false) }
     var goalToContribute by remember { mutableStateOf<SavingGoal?>(null) }
+    var goalToEdit by remember { mutableStateOf<SavingGoal?>(null) }
 
     Column(
         modifier = Modifier
@@ -68,6 +70,7 @@ fun GoalsScreen(viewModel: MainViewModel) {
                     GoalCard(
                         goal = goal,
                         onContribute = { goalToContribute = goal },
+                        onEdit = { goalToEdit = goal },
                         onDelete = { viewModel.deleteSavingGoal(goal.id) }
                     )
                 }
@@ -95,10 +98,21 @@ fun GoalsScreen(viewModel: MainViewModel) {
             }
         )
     }
+
+    if (goalToEdit != null) {
+        EditGoalDialog(
+            goal = goalToEdit!!,
+            onDismiss = { goalToEdit = null },
+            onSave = { name, target ->
+                goalToEdit?.let { viewModel.editSavingGoal(it.id, name, target) }
+                goalToEdit = null
+            }
+        )
+    }
 }
 
 @Composable
-fun GoalCard(goal: SavingGoal, onContribute: () -> Unit, onDelete: () -> Unit) {
+fun GoalCard(goal: SavingGoal, onContribute: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     val progress = (goal.currentAmount / goal.targetAmount).toFloat().coerceIn(0f, 1f)
     
     Surface(
@@ -120,8 +134,13 @@ fun GoalCard(goal: SavingGoal, onContribute: () -> Unit, onDelete: () -> Unit) {
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, "Delete", tint = Color.Gray, modifier = Modifier.size(20.dp))
+                Row {
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, "Edit", tint = Color.Gray, modifier = Modifier.size(20.dp))
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Default.Delete, "Delete", tint = Color.Gray, modifier = Modifier.size(20.dp))
+                    }
                 }
             }
             
@@ -237,6 +256,49 @@ fun ContributeDialog(goalName: String, onDismiss: () -> Unit, onConfirm: (Double
                 }
             }) {
                 Text("ยืนยันการออม")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("ยกเลิก")
+            }
+        }
+    )
+}
+
+@Composable
+fun EditGoalDialog(goal: SavingGoal, onDismiss: () -> Unit, onSave: (String, Double) -> Unit) {
+    var name by remember { mutableStateOf(goal.name) }
+    var target by remember { mutableStateOf(goal.targetAmount.toInt().toString()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("แก้ไขเป้าหมาย") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("ชื่อเป้าหมาย") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = target,
+                    onValueChange = { target = it },
+                    label = { Text("จำนวนเงินเป้าหมาย") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                val t = target.toDoubleOrNull() ?: 0.0
+                if (name.isNotEmpty() && t > 0) {
+                    onSave(name, t)
+                }
+            }) {
+                Text("บันทึก")
             }
         },
         dismissButton = {

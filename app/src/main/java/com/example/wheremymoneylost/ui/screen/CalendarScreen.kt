@@ -46,7 +46,7 @@ fun CalendarScreen(viewModel: MainViewModel) {
             .padding(16.dp)
     ) {
         Text(
-            "ตารางรายจ่าย To-Do",
+            "ปฏิทินรายจ่าย",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
