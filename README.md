@@ -60,6 +60,6 @@
 2. **เปิดใน Android Studio**: แนะนำให้ใช้เวอร์ชัน Arctic Fox ขึ้นไป
 3. **Build & Run**: รองรับอุปกรณ์ Android OS เวอร์ชัน 8.0 (API 26) ขึ้นไป เพื่อให้รองรับระบบ Notification Channels และ Home Screen Widgets
 
----
+**(หรือ Download and Extract File .rar เพื่อติดตั้ง File .apk)**
 
-*พัฒนาด้วย ❤️ เพื่อช่วยให้คุณควบคุมกระเป๋าสตางค์ได้อย่างอยู่หมัด*
+---
